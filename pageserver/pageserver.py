@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 import socket    # Basic TCP/IP communication on the internet
 import _thread   # Response computation runs concurrently with main program
-
+import os        # For directory navigation
 
 def listen(portnum):
     """
@@ -63,10 +63,19 @@ def serve(sock, func):
 # Starter version only serves cat pictures. In fact, only a
 # particular cat picture.  This one.
 ##
+
 CAT = """
      ^ ^
    =(   )=
+   
+   GOOD CAT
 """
+
+# Variables to print 404 and 403 error
+NF = """404 (not found)"""
+
+FB = """403 forbidden error"""
+
 
 # HTTP response codes, as the strings we will actually send.
 # See:  https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
@@ -90,9 +99,35 @@ def respond(sock):
     log.info("Request was {}\n***\n".format(request))
 
     parts = request.split()
+    log.info(str(parts))
+    options = config.configuration()
+
+    directory = "~/UOCIS322-P1/pages" + parts[1]
+    
     if len(parts) > 1 and parts[0] == "GET":
-        transmit(STATUS_OK, sock)
-        transmit(CAT, sock)
+        # default response for just accessing port
+        if parts[1] == "/":
+            transmit(STATUS_OK, sock)
+            transmit(CAT, sock)
+        # response if part starts with forbidden characters
+        elif "/~" in parts[1] or ".." in parts[1] or "//" in parts[1]:
+            log.info("Request forbidden: {}".format(request))
+            transmit(STATUS_FORBIDDEN, sock)
+            transmit(FB, sock)
+        # response if part is a .html or .css
+        elif parts[1].endswith(".html") or parts[1].endswith(".css"):
+            try: 
+                with open(str(options.DOCROOT + parts[1]), "r") as file:
+                    transmit(STATUS_OK, sock)
+                    transmit(file.read(), sock)
+            except:
+                log.info("Request not found: {}".format(request))
+                transmit(STATUS_NOT_FOUND, sock)
+                transmit(NF, sock)
+        else:
+            log.info("Request not found: {}".format(request))
+            transmit(STATUS_NOT_FOUND, sock)
+            transmit(NF, sock)
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
