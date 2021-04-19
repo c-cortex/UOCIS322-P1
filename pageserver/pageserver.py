@@ -116,18 +116,23 @@ def respond(sock):
             transmit(FB, sock)
         # response if part is a .html or .css
         elif parts[1].endswith(".html") or parts[1].endswith(".css"):
+            # will try to open file
             try: 
+                # if file is in docroot path it will open
                 with open(str(options.DOCROOT + parts[1]), "r") as file:
                     transmit(STATUS_OK, sock)
                     transmit(file.read(), sock)
+            # if file is not in docroot path returns error
             except:
                 log.info("Request not found: {}".format(request))
                 transmit(STATUS_NOT_FOUND, sock)
                 transmit(NF, sock)
+        # return error if none of prior conditions are met
         else:
             log.info("Request not found: {}".format(request))
             transmit(STATUS_NOT_FOUND, sock)
             transmit(NF, sock)
+    # returns error if length is not > 1
     else:
         log.info("Unhandled request: {}".format(request))
         transmit(STATUS_NOT_IMPLEMENTED, sock)
